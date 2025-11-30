@@ -1,0 +1,157 @@
+# tasks.yaml
+# Analysis pipeline tasks for MpNewsFeed crew
+# Note: Search tasks are in search_tasks.yaml (used by SearchCrew)
+
+filter_content_task:
+  description: >
+    Review the pre-computed search results for {mp_count} MPs and filter out
+    irrelevant, low-quality, or duplicate content.
+
+    PRE-COMPUTED SEARCH RESULTS:
+    {search_results}
+
+    Apply these filtering rules:
+    1. Remove social media posts unless they announce major political actions
+    2. Eliminate articles about different people with the same name
+    3. Remove duplicate coverage of the same event
+    4. Deprioritize purely biographical or historical content
+
+    Score each remaining item (0-10) based on:
+    - Legislative activity (9-10): Bills, amendments, votes
+    - Committee work (7-8): Hearings, reports, appointments
+    - Public speeches/interventions (6-7): Major statements, debates
+    - News mentions (4-6): General coverage
+    - Low-value content (0-3): Social media, minor mentions
+
+    Keep only items scoring 6 or higher.
+    Prioritize these trusted sources: Politico, official parliament websites,
+    reputable national news outlets (e.g., Le Monde, El País, Süddeutsche Zeitung).
+
+  expected_output: >
+    A filtered and scored list of high-relevance news items for each MP,
+    with each item including: MP name, title, URL, source, date, relevance score,
+    and brief reason for inclusion.
+  agent: content_filter
+  output_file: output/filtered_news_items.json
+
+research_context_task:
+  description: >
+    For each high-priority news item (score 6+), conduct background research
+    to provide context that helps the team understand the significance.
+
+    For each item, research and summarize:
+    1. What is the core topic/legislation/issue about?
+    2. Why is this politically significant?
+    3. Current status and timeline (if applicable)
+    4. Key stakeholders and their positions
+
+    Find 2-3 trusted sources for context and generate a brief (2-3 sentence)
+    contextual summary that explains what the team needs to know.
+
+    Focus on making technical policy topics accessible and highlighting
+    collaboration or advocacy opportunities.
+
+    Use the tool provided to you to research the context of the news.
+    Use the internet to find the context of the news.
+
+    Input from filter_content_task: filtered_news_items.json
+  expected_output: >
+    Each high-priority news item enriched with a contextual brief that includes:
+    - Background explanation (2-3 sentences)
+    - Political significance
+    - Supporting source URLs
+    - Potential collaboration/advocacy angles
+  agent: context_researcher
+  context:
+    - filter_content_task
+  output_file: output/contextualized_news.json
+
+compose_summary_task:
+  description: >
+    Create a comprehensive strategic report from all contextualized MP activities.
+
+    IMPORTANT: Always include TEMPORAL DATA - specify when activities occurred
+    (e.g., "legislation passed in September 2025", "speech delivered on November 15").
+
+    Structure the report with these sections:
+
+    1. EXECUTIVE SUMMARY (top)
+       - Key highlights across the network
+       - Top collaboration opportunities
+       - Priority recruitment leads
+       - Recommended actions
+
+    2. High level MP ACTIVITY
+       - Highlight top 5-7 activities aligned with network goals with dates of activities
+
+    3. THEMATIC INSIGHTS
+       - Cluster activities by policy area relevant to {focus_areas}
+       - Include themes like: fiscal policy, housing policy, taxation, industrial policy
+       - CROSS-MP COLLABORATION POTENTIAL (high-value section):
+         * Identify MPs working on similar issues who could collaborate
+         * Highlight complementary expertise across countries
+         * Suggest specific collaboration opportunities
+       - Note emerging policy trends with timeline
+
+    4. NETWORK GROWTH OPPORTUNITIES
+       - New MPs active on issues aligned with {focus_areas}
+       - Target MPs working on: fiscal policy, housing, taxation, industrial policy
+       - Identify potential champions for upcoming network activities
+
+    5. COUNTRY/PARLIAMENT UPDATES
+       - Brief snapshots by parliament
+       - Notable political developments
+       - Include EXTERNAL context: upcoming elections, government changes,
+         major political shifts affecting the parliament
+
+    Use clear headers, bullet points for scannability, and bold key facts.
+    Keep language accessible but professional.
+    Flag high-priority items with [PRIORITY] tags.
+    Always include dates when activities occurred.
+
+    Input from research_context_task: contextualized_news.json
+    Input from filter_content_task: filtered_news_items.json
+    Timeframe: {timeframe} from {today}
+    Network focus areas: {focus_areas}
+    Total MPs included: {mp_count}
+
+    Include in the report header:
+    - Total number of MPs included ({mp_count})
+    - Reporting period/timeframe
+  expected_output: >
+    A complete markdown-formatted strategic report (1000-2000 words) that is
+    immediately actionable for the team, with clear sections, scannable formatting,
+    and specific recommendations for MP engagement and network growth.
+    The report header must include the total number of MPs included.
+    All activities must include dates when they occurred.
+  agent: summary_composer
+  context:
+    - research_context_task
+  output_file: output/summary_report.md
+
+distribute_report_task:
+  description: >
+    Send the final MP monitoring report to the team via email.
+
+    Format the email with:
+    - Subject: "MP Network Monitoring Report - {date_range}"
+    - Professional email formatting
+    - Metadata: Date range, number of MPs monitored, total activities found
+    - The complete report in the body
+    - Footer with any relevant disclaimers or next steps
+
+    Send to: {team_email}
+    Use the tool provided to you to send the email.
+
+    Log the delivery confirmation including timestamp and recipients.
+
+    Input from compose_summary_task: summary_report.md
+  expected_output: >
+    Confirmation that the email was successfully sent, including:
+    - Timestamp of delivery
+    - Recipients list
+    - Subject line used
+    - Any delivery errors (if applicable)
+  agent: email_distributor
+  context:
+    - compose_summary_task

@@ -1,0 +1,71 @@
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+credentials.json
+secrets.yaml
+
+# Keep example files
+!.env.example
+
+# Output data (may contain sensitive MP information)
+output/
+
+# Knowledge data (contains your actual MP monitoring list)
+knowledge/mp_list.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Claude Code local settings
+.claude/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# crewAI artifacts
+trained_agents_data.pkl
+*.pkl
+.crewai/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/

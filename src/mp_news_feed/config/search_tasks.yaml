@@ -1,0 +1,37 @@
+# search_tasks.yaml
+# Task configuration for SearchCrew - handles single-MP parallel search
+
+search_single_mp_task:
+  description: >
+    Search for recent news about ONE specific Member of Parliament.
+
+    MP to search: {mp_name} from {mp_country}
+    Time frame: {timeframe} from {today}
+
+    Generate smart search queries based on the MP's profile:
+    1. Primary: "{mp_name} {mp_country} parliament news"
+    2. Alternative: "{mp_name} {mp_country} legislation"
+    3. If minister/high-profile: "{mp_name} minister policy"
+
+    For each search result found, collect:
+    - Article title
+    - Article URL
+    - Publication date (or "Unknown" if not found)
+    - Source name
+    - Brief summary (2-3 sentences)
+
+    Aim for 3-5 relevant articles per MP. Focus on:
+    - Legislative activities (bills, votes, amendments)
+    - Committee work and parliamentary interventions
+    - Policy statements and speeches
+    - News from trusted sources (Politico, official parliament sites, quality national news)
+
+    Skip:
+    - Social media posts (unless announcing major political actions)
+    - Articles about different people with the same name
+    - Purely biographical or historical content
+
+  expected_output: >
+    A structured result containing the MP's name, country, and a list of
+    3-5 relevant articles with title, URL, date, source, and summary.
+  agent: search_orchestrator
