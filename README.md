@@ -46,8 +46,19 @@ SENDGRID_API_KEY=your_key
 ## Usage
 
 ```bash
-crewai run
+# Run all phases
+uv run python src/mp_news_feed/main.py
+
+# Or run phases independently
+uv run python src/mp_news_feed/main.py --search-only    # Phase 1: Search only
+uv run python src/mp_news_feed/main.py --analyze-only   # Phase 2: Analysis only
+uv run python src/mp_news_feed/main.py --email-only     # Phase 3: Email only
 ```
+
+Running phases independently is useful for:
+- Iterating on report quality without re-running expensive searches
+- Testing email delivery with existing reports
+- Debugging individual pipeline stages
 
 Outputs are written to `output/`:
 - `search_results.json` - Raw search results
@@ -57,7 +68,7 @@ Outputs are written to `output/`:
 
 ## Architecture
 
-The system uses a two-phase approach:
+The system uses a three-phase approach that can be run together or independently:
 
 ```mermaid
 flowchart TB
@@ -78,6 +89,9 @@ flowchart TB
         CF["Content Filter<br/><i>gpt-4o-mini</i>"]
         CR["Context Researcher<br/><i>gpt-4o-mini</i>"]
         SM["Summary Composer<br/><i>claude-sonnet-4.5</i>"]
+    end
+
+    subgraph Phase3["Phase 3: Email Distribution"]
         ED["Email Distributor<br/><i>gpt-4o-mini</i>"]
     end
 
@@ -106,13 +120,17 @@ flowchart TB
     ED --> EMAIL
 ```
 
-**Phase 1: Parallel Search**
+**Phase 1: Parallel Search** (`--search-only`)
 - Searches all MPs concurrently using `kickoff_for_each_async()`
 - Uses date-filtered Serper API (past 8 months)
 
-**Phase 2: Sequential Analysis**
-- `content_filter` → `context_researcher` → `summary_composer` → `email_distributor`
+**Phase 2: Sequential Analysis** (`--analyze-only`)
+- `content_filter` → `context_researcher` → `summary_composer`
 - Summary uses Claude Sonnet 4.5 for high-quality strategic insights
+- Includes footnote references to source articles
+
+**Phase 3: Email Distribution** (`--email-only`)
+- Sends the report via Brevo email API
 
 ## Support
 

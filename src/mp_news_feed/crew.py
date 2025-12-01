@@ -120,10 +120,36 @@ class MpNewsFeed():
 
     @crew
     def crew(self) -> Crew:
-        """Creates the MpNewsFeed analysis crew"""
+        """Creates the full MpNewsFeed crew (analysis + email)"""
         return Crew(
             agents=self.agents,
             tasks=self.tasks,
+            process=Process.sequential,
+            verbose=True,
+        )
+
+    def analysis_crew(self) -> Crew:
+        """Creates the analysis-only crew (filter → context → summary, no email)"""
+        return Crew(
+            agents=[
+                self.content_filter(),
+                self.context_researcher(),
+                self.summary_composer(),
+            ],
+            tasks=[
+                self.filter_content_task(),
+                self.research_context_task(),
+                self.compose_summary_task(),
+            ],
+            process=Process.sequential,
+            verbose=True,
+        )
+
+    def email_crew(self) -> Crew:
+        """Creates the email-only crew"""
+        return Crew(
+            agents=[self.email_distributor()],
+            tasks=[self.distribute_report_task()],
             process=Process.sequential,
             verbose=True,
         )

@@ -2,11 +2,18 @@
 """
 Main entry point for MP News Feed crew.
 
-Two-phase execution:
+Three-phase execution:
 1. Phase 1: Deterministic parallel search using SearchCrew
-2. Phase 2: Analysis pipeline using MpNewsFeed crew
+2. Phase 2: Analysis pipeline (filter → context → summary)
+3. Phase 3: Email distribution
+
+Phases can be run independently via CLI flags:
+  --search-only   Run only Phase 1
+  --analyze-only  Run only Phase 2 (requires search_results.json)
+  --email-only    Run only Phase 3 (requires summary_report.md)
 """
 import sys
+import argparse
 import warnings
 import json
 from pathlib import Path
@@ -16,6 +23,10 @@ from mp_news_feed.crew import MpNewsFeed
 from mp_news_feed.search_service import run_search
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
+
+OUTPUT_DIR = Path(__file__).parent.parent.parent / "output"
+SEARCH_RESULTS_FILE = OUTPUT_DIR / "search_results.json"
+SUMMARY_REPORT_FILE = OUTPUT_DIR / "summary_report.md"
 
 
 def get_inputs():
@@ -38,51 +49,148 @@ def get_inputs():
     }
 
 
+def parse_args():
+    """Parse CLI arguments for phase control."""
+    parser = argparse.ArgumentParser(
+        description="MP News Feed - Multi-phase news monitoring system"
+    )
+    parser.add_argument(
+        '--search-only', action='store_true',
+        help='Run only Phase 1 (search)'
+    )
+    parser.add_argument(
+        '--analyze-only', action='store_true',
+        help='Run only Phase 2 (analysis) using existing search_results.json'
+    )
+    parser.add_argument(
+        '--email-only', action='store_true',
+        help='Run only Phase 3 (email) using existing summary_report.md'
+    )
+    return parser.parse_args()
+
+
+def load_search_results():
+    """Load existing search results from file."""
+    if not SEARCH_RESULTS_FILE.exists():
+        raise FileNotFoundError(
+            f"Search results not found at {SEARCH_RESULTS_FILE}\n"
+            "Run 'crewai run' or 'crewai run -- --search-only' first."
+        )
+    with open(SEARCH_RESULTS_FILE, 'r') as f:
+        return json.load(f)
+
+
+def load_summary_report():
+    """Load existing summary report from file."""
+    if not SUMMARY_REPORT_FILE.exists():
+        raise FileNotFoundError(
+            f"Summary report not found at {SUMMARY_REPORT_FILE}\n"
+            "Run 'crewai run' or 'crewai run -- --analyze-only' first."
+        )
+    with open(SUMMARY_REPORT_FILE, 'r') as f:
+        return f.read()
+
+
+def run_phase1_search(inputs):
+    """Phase 1: Run parallel search for all MPs."""
+    print("=" * 60)
+    print(f"PHASE 1: Searching {len(inputs['mp_list'])} MPs...")
+    print("=" * 60)
+
+    search_results = run_search(
+        mp_list=inputs['mp_list'],
+        timeframe=inputs['timeframe'],
+        today=inputs['today'],
+        max_concurrency=10
+    )
+
+    # Save search results
+    OUTPUT_DIR.mkdir(exist_ok=True)
+    with open(SEARCH_RESULTS_FILE, 'w') as f:
+        json.dump(search_results, f, indent=2)
+
+    print(f"\nPhase 1 complete!")
+    print(f"  - MPs searched: {search_results['mp_count']}")
+    print(f"  - Articles found: {len(search_results['research_list'])}")
+    print(f"  - Results saved to: {SEARCH_RESULTS_FILE}")
+
+    return search_results
+
+
+def run_phase2_analysis(inputs, search_results):
+    """Phase 2: Run analysis pipeline (filter → context → summary)."""
+    print("\n" + "=" * 60)
+    print("PHASE 2: Running analysis pipeline...")
+    print("=" * 60)
+
+    inputs['search_results'] = search_results
+    inputs['mp_count'] = search_results['mp_count']
+
+    result = MpNewsFeed().analysis_crew().kickoff(inputs=inputs)
+
+    print(f"\nPhase 2 complete!")
+    print(f"  - Report saved to: {SUMMARY_REPORT_FILE}")
+
+    return result
+
+
+def run_phase3_email(inputs):
+    """Phase 3: Send email with existing report."""
+    print("\n" + "=" * 60)
+    print("PHASE 3: Sending email...")
+    print("=" * 60)
+
+    # Load the report to pass to email task
+    report_content = load_summary_report()
+    inputs['report_content'] = report_content
+
+    result = MpNewsFeed().email_crew().kickoff(inputs=inputs)
+
+    print(f"\nPhase 3 complete!")
+    print("  - Email sent successfully")
+
+    return result
+
+
 def run():
-    """Run the crew with deterministic search phase."""
+    """Run the crew with optional phase control."""
+    args = parse_args()
     inputs = get_inputs()
-    output_dir = Path(__file__).parent.parent.parent / "output"
-    output_dir.mkdir(exist_ok=True)
+    OUTPUT_DIR.mkdir(exist_ok=True)
+
+    # Validate mutually exclusive flags
+    flags = [args.search_only, args.analyze_only, args.email_only]
+    if sum(flags) > 1:
+        print("Error: Only one of --search-only, --analyze-only, --email-only can be specified")
+        sys.exit(1)
 
     try:
-        # ========== PHASE 1: Deterministic Search ==========
-        print("=" * 60)
-        print(f"PHASE 1: Searching {len(inputs['mp_list'])} MPs...")
-        print("=" * 60)
+        if args.search_only:
+            # Phase 1 only
+            run_phase1_search(inputs)
 
-        search_results = run_search(
-            mp_list=inputs['mp_list'],
-            timeframe=inputs['timeframe'],
-            today=inputs['today'],
-            max_concurrency=10  # Higher concurrency with OpenAI (200K TPM limit)
-        )
+        elif args.analyze_only:
+            # Phase 2 only (load existing search results)
+            search_results = load_search_results()
+            run_phase2_analysis(inputs, search_results)
 
-        # Save search results
-        search_output_path = output_dir / "search_results.json"
-        with open(search_output_path, 'w') as f:
-            json.dump(search_results, f, indent=2)
+        elif args.email_only:
+            # Phase 3 only (load existing report)
+            run_phase3_email(inputs)
 
-        print(f"\nPhase 1 complete!")
-        print(f"  - MPs searched: {search_results['mp_count']}")
-        print(f"  - Articles found: {len(search_results['research_list'])}")
-        print(f"  - Results saved to: {search_output_path}")
+        else:
+            # Run all phases (default)
+            search_results = run_phase1_search(inputs)
+            run_phase2_analysis(inputs, search_results)
+            run_phase3_email(inputs)
 
-        # ========== PHASE 2: Agent Analysis ==========
-        print("\n" + "=" * 60)
-        print("PHASE 2: Running analysis pipeline...")
-        print("=" * 60)
+            print("\n" + "=" * 60)
+            print("All phases complete!")
+            print("=" * 60)
 
-        # Pass pre-computed search results to crew
-        inputs['search_results'] = search_results
-        inputs['mp_count'] = search_results['mp_count']
-
-        result = MpNewsFeed().crew().kickoff(inputs=inputs)
-
-        print("\n" + "=" * 60)
-        print("Crew execution complete!")
-        print("=" * 60)
-        return result
-
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
     except Exception as e:
         raise Exception(f"An error occurred while running the crew: {e}")
 
@@ -119,3 +227,7 @@ def test():
         )
     except Exception as e:
         raise Exception(f"An error occurred while testing the crew: {e}")
+
+
+if __name__ == "__main__":
+    run()

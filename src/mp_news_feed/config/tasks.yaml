@@ -118,12 +118,20 @@ compose_summary_task:
     Include in the report header:
     - Total number of MPs included ({mp_count})
     - Reporting period/timeframe
+
+    ARTICLE REFERENCES:
+    - When mentioning a specific activity or news item, add a footnote reference number [1], [2], etc.
+    - At the end of the report, include a "## Sources" section listing all referenced articles
+    - Format each source as: [n] Article Title - Source Name (Date) URL
+    - Only reference articles that are directly cited in the report
+    - Keep references minimal - not every mention needs a footnote, only key claims that readers might want to verify
   expected_output: >
     A complete markdown-formatted strategic report (1000-2000 words) that is
     immediately actionable for the team, with clear sections, scannable formatting,
     and specific recommendations for MP engagement and network growth.
     The report header must include the total number of MPs included.
     All activities must include dates when they occurred.
+    A Sources section at the end with numbered references to original articles.
   agent: summary_composer
   context:
     - research_context_task

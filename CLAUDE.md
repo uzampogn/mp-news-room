@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A crewAI multi-agent system that monitors news about Members of Parliament (MPs) and delivers curated strategic reports via email. The system uses a two-phase architecture: parallel search followed by sequential analysis.
+A crewAI multi-agent system that monitors news about Members of Parliament (MPs) and delivers curated strategic reports via email. The system uses a three-phase architecture: parallel search, sequential analysis, and email distribution. Each phase can be run independently.
 
 ## Commands
 
@@ -12,13 +12,18 @@ A crewAI multi-agent system that monitors news about Members of Parliament (MPs)
 # Install dependencies (requires uv)
 crewai install
 
-# Run the full pipeline
-crewai run
+# Run the full pipeline (all 3 phases)
+uv run python src/mp_news_feed/main.py
+
+# Run individual phases
+uv run python src/mp_news_feed/main.py --search-only    # Phase 1: Search only
+uv run python src/mp_news_feed/main.py --analyze-only   # Phase 2: Analysis only
+uv run python src/mp_news_feed/main.py --email-only     # Phase 3: Email only
 ```
 
 ## Architecture
 
-### Two-Phase Execution Model
+### Three-Phase Execution Model
 
 **Phase 1: Parallel Search** (`search_service.py` + `search_crew.py`)
 - Python controls iteration over MPs using `kickoff_for_each_async()`
@@ -26,11 +31,13 @@ crewai run
 - `DateFilteredSerperTool` filters results to past 8 months via Serper `tbs=qdr:m8` parameter
 - Results aggregated into `search_results.json`
 
-**Phase 2: Sequential Analysis** (`crew.py`)
+**Phase 2: Sequential Analysis** (`crew.py` → `analysis_crew()`)
 1. `content_filter` (gpt-4o-mini) - Filters/scores results, keeps score 6+
 2. `context_researcher` (gpt-4o-mini) - Adds political background
-3. `summary_composer` (claude-sonnet-4-5) - Creates strategic markdown report
-4. `email_distributor` (gpt-4o-mini) - Sends via Brevo
+3. `summary_composer` (claude-sonnet-4-5) - Creates strategic markdown report with footnote references
+
+**Phase 3: Email Distribution** (`crew.py` → `email_crew()`)
+- `email_distributor` (gpt-4o-mini) - Sends report via Brevo
 
 ### Key Files
 
