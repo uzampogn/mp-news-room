@@ -11,7 +11,7 @@ filter_content_task:
     {search_results}
 
     Apply these filtering rules:
-    1. Remove social media posts unless they announce major political actions
+    1. Include social media posts from the member of parliament (unless they are about different people with the same name)
     2. Eliminate articles about different people with the same name
     3. Remove duplicate coverage of the same event
     4. Deprioritize purely biographical or historical content
