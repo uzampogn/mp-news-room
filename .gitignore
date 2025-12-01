@@ -13,6 +13,9 @@ secrets.yaml
 # Output data (may contain sensitive MP information)
 output/
 
+# Planning notes
+plan/
+
 # Knowledge data (contains your actual MP monitoring list)
 knowledge/mp_list.json
 
