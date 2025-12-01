@@ -30,7 +30,7 @@ crewai run
 1. `content_filter` (gpt-4o-mini) - Filters/scores results, keeps score 6+
 2. `context_researcher` (gpt-4o-mini) - Adds political background
 3. `summary_composer` (claude-sonnet-4-5) - Creates strategic markdown report
-4. `email_distributor` (gpt-4o-mini) - Sends via SendGrid
+4. `email_distributor` (gpt-4o-mini) - Sends via Brevo
 
 ### Key Files
 
@@ -46,7 +46,7 @@ src/mp_news_feed/
 │   └── search_tasks.yaml # Search task definition
 └── tools/
     ├── date_filtered_serper.py  # Custom Serper with time filtering
-    └── sendgrid_tool.py         # Email distribution
+    └── brevo_tool.py            # Email distribution
 ```
 
 ### Output Pipeline
@@ -70,7 +70,7 @@ Tasks write to `output/` sequentially:
 OPENAI_API_KEY    # Required - gpt-4o-mini calls
 ANTHROPIC_API_KEY # Required - summary_composer uses Claude
 SERPER_API_KEY    # Required - web searches
-SENDGRID_API_KEY  # Required - email distribution
+BREVO_API_KEY     # Required - email distribution
 ```
 
 ## Configuration

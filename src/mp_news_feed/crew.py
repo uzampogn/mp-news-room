@@ -14,7 +14,7 @@ from crewai.project import CrewBase, agent, crew, task
 from typing import List
 from pydantic import BaseModel, Field
 from crewai_tools import SerperDevTool
-from mp_news_feed.tools.sendgrid_tool import SendGridEmailTool
+from mp_news_feed.tools.brevo_tool import BrevoEmailTool
 
 
 class MpNewsResearch(BaseModel):
@@ -90,7 +90,7 @@ class MpNewsFeed():
     def email_distributor(self) -> Agent:
         return Agent(
             config=self.agents_config['email_distributor'],
-            tools=[SendGridEmailTool()],
+            tools=[BrevoEmailTool()],
         )
 
     @task
