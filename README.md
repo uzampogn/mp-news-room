@@ -59,6 +59,53 @@ Outputs are written to `output/`:
 
 The system uses a two-phase approach:
 
+```mermaid
+flowchart TB
+    subgraph Input
+        MP[("mp_list.json<br/>MPs to monitor")]
+    end
+
+    subgraph Phase1["Phase 1: Parallel Search"]
+        direction LR
+        SC1["Search Crew<br/>(MP 1)"]
+        SC2["Search Crew<br/>(MP 2)"]
+        SC3["Search Crew<br/>(MP n)"]
+        SERPER[("Serper API<br/>Date Filtered")]
+    end
+
+    subgraph Phase2["Phase 2: Sequential Analysis"]
+        direction TB
+        CF["Content Filter<br/><i>gpt-4o-mini</i>"]
+        CR["Context Researcher<br/><i>gpt-4o-mini</i>"]
+        SM["Summary Composer<br/><i>claude-sonnet-4.5</i>"]
+        ED["Email Distributor<br/><i>gpt-4o-mini</i>"]
+    end
+
+    subgraph Output["Output Files"]
+        direction TB
+        O1[("search_results.json")]
+        O2[("filtered_news_items.json")]
+        O3[("contextualized_news.json")]
+        O4[("summary_report.md")]
+    end
+
+    subgraph Delivery
+        EMAIL["📧 Brevo Email"]
+    end
+
+    MP --> SC1 & SC2 & SC3
+    SC1 & SC2 & SC3 <--> SERPER
+    SC1 & SC2 & SC3 --> O1
+    O1 --> CF
+    CF --> O2
+    O2 --> CR
+    CR --> O3
+    O3 --> SM
+    SM --> O4
+    O4 --> ED
+    ED --> EMAIL
+```
+
 **Phase 1: Parallel Search**
 - Searches all MPs concurrently using `kickoff_for_each_async()`
 - Uses date-filtered Serper API (past 8 months)
